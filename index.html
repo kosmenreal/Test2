@@ -3,50 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crypto ATR Dashboard</title>
+  <title>ATR Dashboard</title>
 
   <style>
-
     body {
-      margin: 0;
-      padding: 40px;
       background: #0f172a;
       color: white;
-      font-family: Arial, sans-serif;
+      font-family: Arial;
+      padding: 40px;
     }
 
     h1 {
       text-align: center;
       margin-bottom: 40px;
-      font-size: 42px;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
-      gap: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(250px,1fr));
+      gap: 20px;
     }
 
     .card {
       background: #1e293b;
-      border-radius: 18px;
+      border-radius: 16px;
       padding: 24px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.3);
-      transition: 0.2s;
-    }
-
-    .card:hover {
-      transform: translateY(-4px);
     }
 
     .pair {
-      font-size: 30px;
+      font-size: 28px;
       font-weight: bold;
       margin-bottom: 20px;
     }
 
     .row {
-      margin: 14px 0;
+      margin: 12px 0;
       font-size: 20px;
     }
 
@@ -56,29 +47,19 @@
     }
 
     .updated {
-      margin-top: 20px;
-      font-size: 12px;
+      margin-top: 15px;
       opacity: 0.7;
+      font-size: 12px;
     }
-
-    .status {
-      margin-top: 10px;
-      font-size: 13px;
-      color: #94a3b8;
-    }
-
   </style>
 </head>
-
 <body>
 
 <h1>BTC & SOL ATR Dashboard</h1>
 
 <div class="grid">
 
-  <!-- BTC -->
   <div class="card">
-
     <div class="pair">BTCUSDT</div>
 
     <div class="row">
@@ -92,16 +73,9 @@
     </div>
 
     <div class="updated" id="btcUpdated"></div>
-
-    <div class="status">
-      Source: Coinbase API
-    </div>
-
   </div>
 
-  <!-- SOL -->
   <div class="card">
-
     <div class="pair">SOLUSDT</div>
 
     <div class="row">
@@ -115,11 +89,6 @@
     </div>
 
     <div class="updated" id="solUpdated"></div>
-
-    <div class="status">
-      Source: Coinbase API
-    </div>
-
   </div>
 
 </div>
@@ -142,9 +111,7 @@ async function fetchCandles(symbol, interval) {
   const granularity = granularityMap[interval];
 
   const end = new Date();
-
-  const start =
-    new Date(end.getTime() - (100 * granularity * 1000));
+  const start = new Date(end.getTime() - (100 * granularity * 1000));
 
   const url =
     `https://api.exchange.coinbase.com/products/${product}/candles` +
@@ -160,7 +127,7 @@ async function fetchCandles(symbol, interval) {
 
   const data = await response.json();
 
-  // Coinbase format:
+  // Coinbase returns:
   // [time, low, high, open, close, volume]
 
   return data.reverse().map(candle => [
@@ -192,10 +159,10 @@ function calculateATR(candles, period = 14) {
     trs.push(tr);
   }
 
-  const recentTRs = trs.slice(-period);
+  const lastTRs = trs.slice(-period);
 
   const atr =
-    recentTRs.reduce((sum, tr) => sum + tr, 0) / period;
+    lastTRs.reduce((a,b) => a + b, 0) / period;
 
   return atr.toFixed(2);
 }
@@ -204,21 +171,17 @@ async function updateATR(symbol, interval, elementId) {
 
   try {
 
-    const candles =
-      await fetchCandles(symbol, interval);
+    const candles = await fetchCandles(symbol, interval);
 
-    const atr =
-      calculateATR(candles);
+    const atr = calculateATR(candles);
 
-    document.getElementById(elementId)
-      .innerText = atr;
+    document.getElementById(elementId).innerText = atr;
 
   } catch (err) {
 
     console.error(err);
 
-    document.getElementById(elementId)
-      .innerText = "Error";
+    document.getElementById(elementId).innerText = "Error";
   }
 }
 
@@ -234,14 +197,13 @@ async function loadData() {
 
   ]);
 
-  const currentTime =
-    new Date().toLocaleTimeString();
+  const time = new Date().toLocaleTimeString();
 
-  document.getElementById("btcUpdated")
-    .innerText = "Updated: " + currentTime;
+  document.getElementById("btcUpdated").innerText =
+    "Updated: " + time;
 
-  document.getElementById("solUpdated")
-    .innerText = "Updated: " + currentTime;
+  document.getElementById("solUpdated").innerText =
+    "Updated: " + time;
 }
 
 loadData();
