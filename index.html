@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BTC & SOL ATR Dashboard</title>
+
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 40px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    .pair {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .atr {
+      margin: 10px 0;
+      font-size: 18px;
+    }
+
+    .value {
+      color: #38bdf8;
+      font-weight: bold;
+    }
+
+    .updated {
+      margin-top: 12px;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    button {
+      margin-top: 40px;
+      padding: 12px 20px;
+      background: #38bdf8;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      color: black;
+      font-weight: bold;
+    }
+
+    .center {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>BTC & SOL ATR Dashboard</h1>
+
+  <div class="grid">
+
+    <div class="card">
+      <div class="pair">BTCUSDT</div>
+
+      <div class="atr">
+        1H ATR:
+        <span class="value" id="btc1h">Loading...</span>
+      </div>
+
+      <div class="atr">
+        4H ATR:
+        <span class="value" id="btc4h">Loading...</span>
+      </div>
+
+      <div class="updated" id="btcUpdated"></div>
+    </div>
+
+    <div class="card">
+      <div class="pair">SOLUSDT</div>
+
+      <div class="atr">
+        1H ATR:
+        <span class="value" id="sol1h">Loading...</span>
+      </div>
+
+      <div class="atr">
+        4H ATR:
+        <span class="value" id="sol4h">Loading...</span>
+      </div>
+
+      <div class="updated" id="solUpdated"></div>
+    </div>
+
+  </div>
+
+  <div class="center">
+    <button onclick="loadAll()">Refresh</button>
+  </div>
+
+  <script>
+    async function fetchOHLCV(symbol, interval) {
+      const url =
+        `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=100`;
+
+      const response = await fetch(url);
+      return await response.json();
+    }
+
+    function calculateATR(data, period = 14) {
+      const trs = [];
+
+      for (let i = 1; i < data.length; i++) {
+        const high = parseFloat(data[i][2]);
+        const low = parseFloat(data[i][3]);
+        const prevClose = parseFloat(data[i - 1][4]);
+
+        const tr = Math.max(
+          high - low,
+          Math.abs(high - prevClose),
+          Math.abs(low - prevClose)
+        );
+
+        trs.push(tr);
+      }
+
+      // ATR average
+      const recentTRs = trs.slice(-period);
+
+      const atr =
+        recentTRs.reduce((sum, tr) => sum + tr, 0) / period;
+
+      return atr.toFixed(2);
+    }
+
+    async function getATR(symbol, interval) {
+      const data = await fetchOHLCV(symbol, interval);
+      return calculateATR(data);
+    }
+
+    async function loadBTC() {
+      const atr1h = await getATR("BTCUSDT", "1h");
+      const atr4h = await getATR("BTCUSDT", "4h");
+
+      document.getElementById("btc1h").innerText = atr1h;
+      document.getElementById("btc4h").innerText = atr4h;
+
+      document.getElementById("btcUpdated").innerText =
+        "Updated: " + new Date().toLocaleTimeString();
+    }
+
+    async function loadSOL() {
+      const atr1h = await getATR("SOLUSDT", "1h");
+      const atr4h = await getATR("SOLUSDT", "4h");
+
+      document.getElementById("sol1h").innerText = atr1h;
+      document.getElementById("sol4h").innerText = atr4h;
+
+      document.getElementById("solUpdated").innerText =
+        "Updated: " + new Date().toLocaleTimeString();
+    }
+
+    async function loadAll() {
+      try {
+        await Promise.all([
+          loadBTC(),
+          loadSOL()
+        ]);
+      } catch (err) {
+        console.error(err);
+        alert("Error loading ATR data");
+      }
+    }
+
+    loadAll();
+
+</body>
+</html>

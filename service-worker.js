@@ -1,0 +1,24 @@
+const CACHE_NAME = "app-cache-v2"; // change version!
+
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll([
+        "index.html",
+        "manifest.json"
+      ]);
+    })
+  );
+});
+
+self.addEventListener("fetch", event => {
+  event.respondWith(
+    fetch(event.request)
+      .then(response => {
+        const copy = response.clone();
+        caches.open("app-cache").then(cache => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
+  );
+});
