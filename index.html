@@ -336,25 +336,25 @@ function calculateRisk() {
       document.getElementById("stopLoss").value
     );
 
-  const portfolio =
-    parseFloat(
-      document.getElementById("portfolio").value
-    );
+ const portfolio =
+  parseFloat(
+    document.getElementById("portfolio").value
+  );
 
-  const riskPercent =
-    parseFloat(
-      document.getElementById("risk").value
-    );
+const riskAmount =
+  parseFloat(
+    document.getElementById("risk").value
+  );
 
-  const atrKey =
-    document.getElementById("atrSource").value;
+const atrKey =
+  document.getElementById("atrSource").value;
 
-  const atr =
-    atrValues[atrKey];
+const atr =
+  atrValues[atrKey];
 
-  if (!entry || !stop || !atr) {
-    return;
-  }
+if (!entry || !stop || !atr || !riskAmount) {
+  return;
+}
 
   const riskAmount =
     portfolio * (riskPercent / 100);
