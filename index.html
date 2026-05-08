@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crypto ATR Dashboard</title>
+
+  <style>
+
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      margin: 0;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+      font-size: 42px;
+    }
+
+    .calculator {
+      background: #1e293b;
+      padding: 24px;
+      border-radius: 18px;
+      margin-bottom: 40px;
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+      gap: 18px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      margin-bottom: 8px;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    input, select {
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: #334155;
+      color: white;
+      font-size: 16px;
+    }
+
+    .results {
+      margin-top: 30px;
+      font-size: 20px;
+    }
+
+    .result {
+      margin: 12px 0;
+    }
+
+    .value {
+      color: #38bdf8;
+      font-weight: bold;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: #1e293b;
+      border-radius: 18px;
+      padding: 24px;
+    }
+
+    .pair {
+      font-size: 30px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .row {
+      margin: 14px 0;
+      font-size: 20px;
+    }
+
+    .updated {
+      margin-top: 20px;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<h1>BTC & SOL ATR Dashboard</h1>
+
+<!-- CALCULATOR -->
+
+<div class="calculator">
+
+  <h2>Risk Calculator</h2>
+
+  <div class="calc-grid">
+
+    <div class="input-group">
+      <label>ENTRY PRICE (D3)</label>
+      <input type="number" id="entryPrice" step="0.01">
+    </div>
+
+    <div class="input-group">
+      <label>STOP LOSS (E3)</label>
+      <input type="number" id="stopLoss" step="0.01">
+    </div>
+
+    <div class="input-group">
+      <label>PORTFOLIO (B3)</label>
+      <input type="number" id="portfolio" value="10">
+    </div>
+
+    <div class="input-group">
+      <label>RISK $ (C3)</label>
+      <input type="number" id="risk" value="1">
+    </div>
+
+    <div class="input-group">
+
+      <label>ATR SOURCE (G4)</label>
+
+      <select id="atrSource">
+
+        <option value="btc1h">
+          1H BTC ATR
+        </option>
+
+        <option value="btc4h">
+          4H BTC ATR
+        </option>
+
+        <option value="sol1h">
+          1H SOL ATR
+        </option>
+
+        <option value="sol4h">
+          4H SOL ATR
+        </option>
+
+      </select>
+
+    </div>
+
+  </div>
+
+  <div class="results">
+
+    <div class="result">
+      Stop Loss With Slippage:
+      <span class="value" id="slippageResult">
+        -
+      </span>
+    </div>
+
+    <div class="result">
+      Amount Of Coin:
+      <span class="value" id="coinAmount">
+        -
+      </span>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ATR DASHBOARD -->
+
+<div class="grid">
+
+  <!-- BTC -->
+
+  <div class="card">
+
+    <div class="pair">BTCUSDT</div>
+
+    <div class="row">
+      1H ATR:
+      <span class="value" id="btc1h">
+        Loading...
+      </span>
+    </div>
+
+    <div class="row">
+      4H ATR:
+      <span class="value" id="btc4h">
+        Loading...
+      </span>
+    </div>
+
+    <div class="updated" id="btcUpdated"></div>
+
+  </div>
+
+  <!-- SOL -->
+
+  <div class="card">
+
+    <div class="pair">SOLUSDT</div>
+
+    <div class="row">
+      1H ATR:
+      <span class="value" id="sol1h">
+        Loading...
+      </span>
+    </div>
+
+    <div class="row">
+      4H ATR:
+      <span class="value" id="sol4h">
+        Loading...
+      </span>
+    </div>
+
+    <div class="updated" id="solUpdated"></div>
+
+  </div>
+
+</div>
+
+<script>
+
+let atrValues = {};
+
+async function fetchCandles(symbol, interval) {
+
+  const pairMap = {
+    BTCUSDT: "XBTUSDT",
+    SOLUSDT: "SOLUSD"
+  };
+
+  const intervalMap = {
+    "1h": 60,
+    "4h": 240
+  };
+
+  const pair = pairMap[symbol];
+  const tf = intervalMap[interval];
+
+  const url =
+    `https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=${tf}`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error("API Error");
+  }
+
+  const json = await response.json();
+
+  if (json.error.length > 0) {
+    throw new Error(json.error.join(", "));
+  }
+
+  const resultKey =
+    Object.keys(json.result).find(
+      key => key !== "last"
+    );
+
+  return json.result[resultKey];
+}
+
+function calculateATR(candles, period = 14) {
+
+  let trs = [];
+
+  for (let i = 1; i < candles.length; i++) {
+
+    // Kraken format:
+    // [time, open, high, low, close, vwap, volume, count]
+
+    const high =
+      parseFloat(candles[i][2]);
+
+    const low =
+      parseFloat(candles[i][3]);
+
+    const prevClose =
+      parseFloat(candles[i - 1][4]);
+
+    const tr = Math.max(
+      high - low,
+      Math.abs(high - prevClose),
+      Math.abs(low - prevClose)
+    );
+
+    trs.push(tr);
+  }
+
+  const recentTRs =
+    trs.slice(-period);
+
+  const atr =
+    recentTRs.reduce(
+      (sum, tr) => sum + tr,
+      0
+    ) / period;
+
+  return atr;
+}
+
+async function updateATR(symbol, interval, elementId) {
+
+  try {
+
+    const candles =
+      await fetchCandles(symbol, interval);
+
+    const atr =
+      calculateATR(candles);
+
+    atrValues[elementId] = atr;
+
+    document.getElementById(elementId)
+      .innerText = atr.toFixed(2);
+
+    calculateRisk();
+
+  } catch (err) {
+
+    console.error(err);
+
+    document.getElementById(elementId)
+      .innerText = "Error";
+  }
+}
+
+function calculateRisk() {
+
+  const entry =
+    parseFloat(
+      document.getElementById("entryPrice").value
+    );
+
+  const stop =
+    parseFloat(
+      document.getElementById("stopLoss").value
+    );
+
+  const portfolio =
+    parseFloat(
+      document.getElementById("portfolio").value
+    );
+
+  // RISK IS NOW DIRECT DOLLAR AMOUNT
+
+  const riskAmount =
+    parseFloat(
+      document.getElementById("risk").value
+    );
+
+  const atrKey =
+    document.getElementById("atrSource").value;
+
+  const atr =
+    atrValues[atrKey];
+
+  if (
+    !entry ||
+    !stop ||
+    !atr ||
+    !riskAmount
+  ) {
+    return;
+  }
+
+  // STOP LOSS WITH SLIPPAGE
+
+  let stopWithSlippage;
+
+  if (entry - stop > 0) {
+
+    stopWithSlippage =
+      entry -
+      Math.abs(
+        entry - stop - (atr * 0.1)
+      );
+
+  } else {
+
+    stopWithSlippage =
+      entry +
+      Math.abs(
+        entry - stop + (atr * 0.1)
+      );
+  }
+
+  // AMOUNT OF COIN
+
+  const amountOfCoin =
+    riskAmount /
+    Math.abs(entry - stop);
+
+  document.getElementById("slippageResult")
+    .innerText =
+    stopWithSlippage.toFixed(4);
+
+  document.getElementById("coinAmount")
+    .innerText =
+    amountOfCoin.toFixed(4);
+}
+
+async function loadData() {
+
+  await Promise.all([
+
+    updateATR(
+      "BTCUSDT",
+      "1h",
+      "btc1h"
+    ),
+
+    updateATR(
+      "BTCUSDT",
+      "4h",
+      "btc4h"
+    ),
+
+    updateATR(
+      "SOLUSDT",
+      "1h",
+      "sol1h"
+    ),
+
+    updateATR(
+      "SOLUSDT",
+      "4h",
+      "sol4h"
+    )
+
+  ]);
+
+  const currentTime =
+    new Date().toLocaleTimeString();
+
+  document.getElementById("btcUpdated")
+    .innerText =
+    "Updated: " + currentTime;
+
+  document.getElementById("solUpdated")
+    .innerText =
+    "Updated: " + currentTime;
+}
+
+document.querySelectorAll("input, select")
+  .forEach(el => {
+
+    el.addEventListener(
+      "input",
+      calculateRisk
+    );
+
+  });
+
+loadData();
+
+</script>
+
+</body>
+</html>
