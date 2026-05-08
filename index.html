@@ -97,27 +97,21 @@
 
 async function fetchCandles(symbol, interval) {
 
-  const productMap = {
-    BTCUSDT: "BTC-USD",
-    SOLUSDT: "SOL-USD"
+  const pairMap = {
+    BTCUSDT: "XBTUSDT",
+    SOLUSDT: "SOLUSD"
   };
 
-  const granularityMap = {
-    "1h": 3600,
-    "4h": 14400
+  const intervalMap = {
+    "1h": 60,
+    "4h": 240
   };
 
-  const product = productMap[symbol];
-  const granularity = granularityMap[interval];
-
-  const end = new Date();
-  const start = new Date(end.getTime() - (100 * granularity * 1000));
+  const pair = pairMap[symbol];
+  const tf = intervalMap[interval];
 
   const url =
-    `https://api.exchange.coinbase.com/products/${product}/candles` +
-    `?granularity=${granularity}` +
-    `&start=${start.toISOString()}` +
-    `&end=${end.toISOString()}`;
+    `https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=${tf}`;
 
   const response = await fetch(url);
 
@@ -125,19 +119,14 @@ async function fetchCandles(symbol, interval) {
     throw new Error("API Error");
   }
 
-  const data = await response.json();
+  const json = await response.json();
 
-  // Coinbase returns:
-  // [time, low, high, open, close, volume]
+  const resultKey =
+    Object.keys(json.result).find(
+      key => key !== "last"
+    );
 
-  return data.reverse().map(candle => [
-    candle[0],
-    candle[3],
-    candle[2],
-    candle[1],
-    candle[4],
-    candle[5]
-  ]);
+  return json.result[resultKey];
 }
 
 function calculateATR(candles, period = 14) {
